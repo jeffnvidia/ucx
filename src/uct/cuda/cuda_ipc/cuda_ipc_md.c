@@ -20,6 +20,7 @@
 #include <uct/api/v2/uct_v2.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <cuda_runtime.h>
 
 static ucs_config_field_t uct_cuda_ipc_md_config_table[] = {
     {"", "", NULL,
@@ -191,7 +192,22 @@ static ucs_status_t uct_cuda_ipc_is_peer_accessible(uct_cuda_ipc_component_t *md
     int num_devices;
     ucs_ternary_auto_value_t *accessible;
     void *d_mapped;
+    int this_device_index;
+    cudaError_t status_get_device;
 
+    status_get_device = cudaGetDevice(&this_device_index);
+    printf("status for cuGetDevice : %d\n", status_get_device);
+    ucs_log(UCS_LOG_LEVEL_DEBUG, "status for cuGetDevice : %d\n", status_get_device);
+    // ucx_debug("status for cuGetDevice : %d\n", status_get_device);
+    if (status_get_device == cudaSuccess) {
+        printf("Current CUDA device index: %d\n", this_device_index);
+        ucs_log(UCS_LOG_LEVEL_DEBUG, "Current CUDA device index: %d\n", this_device_index);
+        // ucx_debug("Current CUDA device index: %d\n", this_device_index);
+    } else {
+        printf("Error getting CUDA device: %s\n", cudaGetErrorString(status_get_device));
+        ucs_log(UCS_LOG_LEVEL_DEBUG, "Error getting CUDA device: %s\n", cudaGetErrorString(status_get_device));
+        // ucx_debug("Error getting CUDA device: %s\n", cudaGetErrorString(status_get_device));
+    }
     status = uct_cuda_ipc_get_unique_index_for_uuid(&peer_idx, mdc->md, rkey);
     if (ucs_unlikely(status != UCS_OK)) {
         goto err;
