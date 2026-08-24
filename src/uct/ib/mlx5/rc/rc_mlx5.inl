@@ -417,6 +417,7 @@ uct_rc_mlx5_iface_common_am_handler(uct_rc_mlx5_iface_common_t *iface,
                                     byte_len - sizeof(*hdr),
                                     cqe->imm_inval_pkey, cqe->slid, flags);
     } else {
+        uct_a2a_diag_rc_am(hdr->rc_hdr.am_id);
         status = uct_iface_invoke_am(&iface->super.super.super, hdr->rc_hdr.am_id,
                                      hdr + 1, byte_len - sizeof(*hdr),
                                      flags);

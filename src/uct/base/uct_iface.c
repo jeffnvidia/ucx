@@ -22,6 +22,109 @@
 #include <ucs/debug/debug_int.h>
 #include <ucs/vfs/base/vfs_obj.h>
 
+#include <string.h>
+
+
+/* UCP internal AM IDs used by the pinned stack under test. */
+enum {
+    UCT_A2A_DIAG_AM_RNDV_RTS  = 9,
+    UCT_A2A_DIAG_AM_RNDV_ATS  = 10,
+    UCT_A2A_DIAG_AM_RNDV_RTR  = 11,
+    UCT_A2A_DIAG_AM_RNDV_DATA = 12,
+    UCT_A2A_DIAG_AM_RNDV_ATP  = 16
+};
+
+__thread int uct_a2a_diag_enabled;
+static __thread uct_a2a_diag_snapshot_t uct_a2a_diag_counters;
+
+
+void uct_a2a_diag_reset(void)
+{
+    memset(&uct_a2a_diag_counters, 0, sizeof(uct_a2a_diag_counters));
+    uct_a2a_diag_enabled = 1;
+}
+
+
+void uct_a2a_diag_snapshot(uct_a2a_diag_snapshot_t *snapshot)
+{
+    *snapshot = uct_a2a_diag_counters;
+}
+
+
+void uct_a2a_diag_rc_progress(unsigned rx_count, ucs_time_t rx_ticks,
+                              int tx_polled, unsigned tx_count,
+                              ucs_time_t tx_ticks, ucs_time_t total_ticks)
+{
+    uct_a2a_diag_counters.rc_progress_calls++;
+    uct_a2a_diag_counters.rc_progress_ticks += total_ticks;
+    uct_a2a_diag_counters.rc_rx_poll_calls++;
+    uct_a2a_diag_counters.rc_rx_cqes += rx_count;
+    if (rx_count == 0) {
+        uct_a2a_diag_counters.rc_rx_empty_ticks += rx_ticks;
+    } else {
+        uct_a2a_diag_counters.rc_rx_cqe_ticks += rx_ticks;
+    }
+
+    if (tx_polled) {
+        uct_a2a_diag_counters.rc_tx_poll_calls++;
+        uct_a2a_diag_counters.rc_tx_cqes += tx_count;
+        if (tx_count == 0) {
+            uct_a2a_diag_counters.rc_tx_empty_ticks += tx_ticks;
+        } else {
+            uct_a2a_diag_counters.rc_tx_cqe_ticks += tx_ticks;
+        }
+    }
+
+    if ((rx_count + tx_count) == 0) {
+        uct_a2a_diag_counters.rc_progress_zero_calls++;
+    }
+}
+
+
+void uct_a2a_diag_tx_op_slow(uct_a2a_diag_tx_op_t type)
+{
+    uct_a2a_diag_counters.rc_tx_ops++;
+    switch (type) {
+    case UCT_A2A_DIAG_TX_OP_GET_ZCOPY:
+        uct_a2a_diag_counters.rc_tx_get_zcopy_ops++;
+        break;
+    case UCT_A2A_DIAG_TX_OP_AM_ZCOPY:
+        uct_a2a_diag_counters.rc_tx_am_zcopy_ops++;
+        break;
+    case UCT_A2A_DIAG_TX_OP_SEND:
+        uct_a2a_diag_counters.rc_tx_send_ops++;
+        break;
+    default:
+        uct_a2a_diag_counters.rc_tx_other_ops++;
+        break;
+    }
+}
+
+
+void uct_a2a_diag_rc_am_slow(uint8_t id)
+{
+    switch (id) {
+    case UCT_A2A_DIAG_AM_RNDV_RTS:
+        uct_a2a_diag_counters.rc_am_rts++;
+        break;
+    case UCT_A2A_DIAG_AM_RNDV_ATS:
+        uct_a2a_diag_counters.rc_am_ats++;
+        break;
+    case UCT_A2A_DIAG_AM_RNDV_RTR:
+        uct_a2a_diag_counters.rc_am_rtr++;
+        break;
+    case UCT_A2A_DIAG_AM_RNDV_DATA:
+        uct_a2a_diag_counters.rc_am_data++;
+        break;
+    case UCT_A2A_DIAG_AM_RNDV_ATP:
+        uct_a2a_diag_counters.rc_am_atp++;
+        break;
+    default:
+        uct_a2a_diag_counters.rc_am_other++;
+        break;
+    }
+}
+
 
 const char *uct_ep_operation_names[] = {
     [UCT_EP_OP_AM_SHORT]     = "am_short",

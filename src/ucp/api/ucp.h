@@ -4300,6 +4300,40 @@ ucs_status_t ucp_ep_query(ucp_ep_h ep, ucp_ep_attr_t *attr);
 
 
 /**
+ * Temporary experiment-only RC mlx5 progress snapshot. Values are cumulative
+ * since the last reset and are local to the calling progress thread.
+ */
+typedef struct ucp_a2a_diag_snapshot {
+    uint64_t rc_progress_calls;
+    uint64_t rc_progress_ns;
+    uint64_t rc_progress_zero_calls;
+    uint64_t rc_rx_poll_calls;
+    uint64_t rc_rx_cqes;
+    uint64_t rc_rx_empty_ns;
+    uint64_t rc_rx_cqe_ns;
+    uint64_t rc_tx_poll_calls;
+    uint64_t rc_tx_cqes;
+    uint64_t rc_tx_empty_ns;
+    uint64_t rc_tx_cqe_ns;
+    uint64_t rc_tx_ops;
+    uint64_t rc_tx_get_zcopy_ops;
+    uint64_t rc_tx_am_zcopy_ops;
+    uint64_t rc_tx_send_ops;
+    uint64_t rc_tx_other_ops;
+    uint64_t rc_am_rts;
+    uint64_t rc_am_ats;
+    uint64_t rc_am_rtr;
+    uint64_t rc_am_data;
+    uint64_t rc_am_atp;
+    uint64_t rc_am_other;
+} ucp_a2a_diag_snapshot_t;
+
+
+void ucp_worker_a2a_diag_snapshot(ucp_worker_h worker, int reset,
+                                  ucp_a2a_diag_snapshot_t *snapshot);
+
+
+/**
  * @example ucp_hello_world.c
  * UCP hello world client / server example utility.
  *

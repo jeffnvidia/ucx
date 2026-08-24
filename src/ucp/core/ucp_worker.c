@@ -35,6 +35,7 @@
 #include <ucs/arch/atomic.h>
 #include <ucs/vfs/base/vfs_cb.h>
 #include <ucs/vfs/base/vfs_obj.h>
+#include <uct/base/uct_iface.h>
 #include <sys/poll.h>
 #include <sys/eventfd.h>
 #include <sys/epoll.h>
@@ -54,6 +55,48 @@
 #define UCP_WIFACE_ARG(_wiface) \
     (_wiface)->iface, UCT_TL_RESOURCE_DESC_ARG( \
             &(_wiface)->worker->context->tl_rscs[(_wiface)->rsc_index].tl_rsc)
+
+
+void ucp_worker_a2a_diag_snapshot(ucp_worker_h worker, int reset,
+                                  ucp_a2a_diag_snapshot_t *snapshot)
+{
+    uct_a2a_diag_snapshot_t uct_snapshot;
+
+    (void)worker;
+    if (reset) {
+        uct_a2a_diag_reset();
+    }
+    uct_a2a_diag_snapshot(&uct_snapshot);
+
+    snapshot->rc_progress_calls      = uct_snapshot.rc_progress_calls;
+    snapshot->rc_progress_ns         =
+        (uint64_t)ucs_time_to_nsec(uct_snapshot.rc_progress_ticks);
+    snapshot->rc_progress_zero_calls =
+        uct_snapshot.rc_progress_zero_calls;
+    snapshot->rc_rx_poll_calls       = uct_snapshot.rc_rx_poll_calls;
+    snapshot->rc_rx_cqes             = uct_snapshot.rc_rx_cqes;
+    snapshot->rc_rx_empty_ns         =
+        (uint64_t)ucs_time_to_nsec(uct_snapshot.rc_rx_empty_ticks);
+    snapshot->rc_rx_cqe_ns           =
+        (uint64_t)ucs_time_to_nsec(uct_snapshot.rc_rx_cqe_ticks);
+    snapshot->rc_tx_poll_calls       = uct_snapshot.rc_tx_poll_calls;
+    snapshot->rc_tx_cqes             = uct_snapshot.rc_tx_cqes;
+    snapshot->rc_tx_empty_ns         =
+        (uint64_t)ucs_time_to_nsec(uct_snapshot.rc_tx_empty_ticks);
+    snapshot->rc_tx_cqe_ns           =
+        (uint64_t)ucs_time_to_nsec(uct_snapshot.rc_tx_cqe_ticks);
+    snapshot->rc_tx_ops              = uct_snapshot.rc_tx_ops;
+    snapshot->rc_tx_get_zcopy_ops    = uct_snapshot.rc_tx_get_zcopy_ops;
+    snapshot->rc_tx_am_zcopy_ops     = uct_snapshot.rc_tx_am_zcopy_ops;
+    snapshot->rc_tx_send_ops         = uct_snapshot.rc_tx_send_ops;
+    snapshot->rc_tx_other_ops        = uct_snapshot.rc_tx_other_ops;
+    snapshot->rc_am_rts              = uct_snapshot.rc_am_rts;
+    snapshot->rc_am_ats              = uct_snapshot.rc_am_ats;
+    snapshot->rc_am_rtr              = uct_snapshot.rc_am_rtr;
+    snapshot->rc_am_data             = uct_snapshot.rc_am_data;
+    snapshot->rc_am_atp              = uct_snapshot.rc_am_atp;
+    snapshot->rc_am_other            = uct_snapshot.rc_am_other;
+}
 
 
 typedef enum ucp_worker_event_fd_op {

@@ -22,11 +22,76 @@
 #include <ucs/stats/stats.h>
 #include <ucs/sys/compiler.h>
 #include <ucs/sys/uid.h>
+#include <ucs/time/time.h>
 #include <ucs/type/class.h>
 #include <uct/api/v2/uct_v2.h>
 #include <ucs/type/param.h>
 
 #include <ucs/datastruct/mpool.inl>
+
+
+/*
+ * Temporary, experiment-only counters used to attribute UCP worker progress
+ * time to the RC mlx5 CQ path. They deliberately live below UCP so the
+ * existing AllToAll phase trace can take cumulative snapshots without logging
+ * from the packet hot path.
+ */
+typedef enum {
+    UCT_A2A_DIAG_TX_OP_GET_ZCOPY,
+    UCT_A2A_DIAG_TX_OP_AM_ZCOPY,
+    UCT_A2A_DIAG_TX_OP_SEND,
+    UCT_A2A_DIAG_TX_OP_OTHER
+} uct_a2a_diag_tx_op_t;
+
+typedef struct {
+    uint64_t rc_progress_calls;
+    uint64_t rc_progress_ticks;
+    uint64_t rc_progress_zero_calls;
+    uint64_t rc_rx_poll_calls;
+    uint64_t rc_rx_cqes;
+    uint64_t rc_rx_empty_ticks;
+    uint64_t rc_rx_cqe_ticks;
+    uint64_t rc_tx_poll_calls;
+    uint64_t rc_tx_cqes;
+    uint64_t rc_tx_empty_ticks;
+    uint64_t rc_tx_cqe_ticks;
+    uint64_t rc_tx_ops;
+    uint64_t rc_tx_get_zcopy_ops;
+    uint64_t rc_tx_am_zcopy_ops;
+    uint64_t rc_tx_send_ops;
+    uint64_t rc_tx_other_ops;
+    uint64_t rc_am_rts;
+    uint64_t rc_am_ats;
+    uint64_t rc_am_rtr;
+    uint64_t rc_am_data;
+    uint64_t rc_am_atp;
+    uint64_t rc_am_other;
+} uct_a2a_diag_snapshot_t;
+
+extern __thread int uct_a2a_diag_enabled;
+
+void uct_a2a_diag_reset(void);
+void uct_a2a_diag_snapshot(uct_a2a_diag_snapshot_t *snapshot);
+void uct_a2a_diag_rc_progress(unsigned rx_count, ucs_time_t rx_ticks,
+                              int tx_polled, unsigned tx_count,
+                              ucs_time_t tx_ticks, ucs_time_t total_ticks);
+void uct_a2a_diag_tx_op_slow(uct_a2a_diag_tx_op_t type);
+void uct_a2a_diag_rc_am_slow(uint8_t id);
+
+static UCS_F_ALWAYS_INLINE void
+uct_a2a_diag_tx_op(uct_a2a_diag_tx_op_t type)
+{
+    if (ucs_unlikely(uct_a2a_diag_enabled)) {
+        uct_a2a_diag_tx_op_slow(type);
+    }
+}
+
+static UCS_F_ALWAYS_INLINE void uct_a2a_diag_rc_am(uint8_t id)
+{
+    if (ucs_unlikely(uct_a2a_diag_enabled)) {
+        uct_a2a_diag_rc_am_slow(id);
+    }
+}
 
 
 /* UCT IFACE local address flag which packed to ID and indicates if an address

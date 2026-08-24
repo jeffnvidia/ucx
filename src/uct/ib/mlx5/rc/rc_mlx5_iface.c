@@ -107,14 +107,34 @@ static UCS_F_ALWAYS_INLINE unsigned
 uct_rc_mlx5_iface_progress(void *arg, int flags)
 {
     uct_rc_mlx5_iface_common_t *iface = arg;
-    unsigned count;
+    ucs_time_t start_time, rx_time, tx_time;
+    unsigned rx_count, tx_count;
+    int tx_polled;
 
-    count = uct_rc_mlx5_iface_common_poll_rx(iface, flags);
-    if (!uct_rc_iface_poll_tx(&iface->super, count)) {
-        return count;
+    if (ucs_likely(!uct_a2a_diag_enabled)) {
+        rx_count = uct_rc_mlx5_iface_common_poll_rx(iface, flags);
+        if (!uct_rc_iface_poll_tx(&iface->super, rx_count)) {
+            return rx_count;
+        }
+
+        return rx_count + uct_rc_mlx5_iface_poll_tx(iface, flags);
     }
 
-    return count + uct_rc_mlx5_iface_poll_tx(iface, flags);
+    start_time = ucs_get_time();
+    rx_count   = uct_rc_mlx5_iface_common_poll_rx(iface, flags);
+    rx_time    = ucs_get_time();
+    tx_polled  = uct_rc_iface_poll_tx(&iface->super, rx_count);
+    tx_count   = 0;
+    tx_time    = rx_time;
+    if (tx_polled) {
+        tx_count = uct_rc_mlx5_iface_poll_tx(iface, flags);
+        tx_time  = ucs_get_time();
+    }
+    uct_a2a_diag_rc_progress(rx_count, rx_time - start_time, tx_polled,
+                             tx_count, tx_time - rx_time,
+                             tx_time - start_time);
+
+    return rx_count + tx_count;
 }
 
 static unsigned uct_rc_mlx5_iface_progress_cyclic(void *arg)

@@ -439,9 +439,21 @@ uct_rc_txqp_add_flush_comp(uct_rc_iface_t *iface, uct_base_ep_t *ep,
 static UCS_F_ALWAYS_INLINE void
 uct_rc_txqp_completion_op(uct_rc_iface_send_op_t *op, const void *resp)
 {
+    uct_a2a_diag_tx_op_t diag_type;
+
     ucs_trace_poll("complete op %p sn %d handler %s", op, op->sn,
                    ucs_debug_get_symbol_name((void*)op->handler));
     ucs_assert(op->flags & UCT_RC_IFACE_SEND_OP_FLAG_INUSE);
+    if (op->handler == uct_rc_ep_get_zcopy_completion_handler) {
+        diag_type = UCT_A2A_DIAG_TX_OP_GET_ZCOPY;
+    } else if (op->handler == uct_rc_ep_am_zcopy_handler) {
+        diag_type = UCT_A2A_DIAG_TX_OP_AM_ZCOPY;
+    } else if (op->handler == uct_rc_ep_send_op_completion_handler) {
+        diag_type = UCT_A2A_DIAG_TX_OP_SEND;
+    } else {
+        diag_type = UCT_A2A_DIAG_TX_OP_OTHER;
+    }
+    uct_a2a_diag_tx_op(diag_type);
     op->flags &= ~(UCT_RC_IFACE_SEND_OP_FLAG_INUSE |
                    UCT_RC_IFACE_SEND_OP_FLAG_ZCOPY);
     op->handler(op, resp);
