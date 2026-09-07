@@ -75,9 +75,7 @@ static ucs_status_t ucp_proto_thresholds_next_range(
     ucs_dynamic_bitmap_reset_all(proto_mask);
     ucs_dynamic_bitmap_init(&disabled_proto_mask);
 
-    for (proto_idx = 0; proto_idx < ucs_array_length(&proto_init->protocols);
-         ++proto_idx) {
-        proto = &ucs_array_elem(&proto_init->protocols, proto_idx);
+    ucs_array_for_each_index(proto, proto_idx, &proto_init->protocols) {
         range = ucp_proto_flat_perf_find_lb(proto->flat_perf, msg_length);
         if (range == NULL) {
             ucs_trace("skipping proto %s for msg_length %zu",
@@ -360,6 +358,7 @@ ucp_proto_select_elem_init_thresh(ucp_worker_h worker,
      * possible message sizes until SIZE_MAX.
      */
     msg_length = 0;
+    max_length = SIZE_MAX;
     do {
         ucs_array_init_dynamic(&perf_list);
         ucs_array_init_dynamic(&envelope);
