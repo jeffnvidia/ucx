@@ -1571,7 +1571,7 @@ UCS_TEST_P(test_ucp_proto_mock_mtype_sys_dev, put_host_frag_non_sibling,
 
 /* A wire-packed rkey sys_dev belongs to the peer's topology namespace. Model
  * a numeric collision with our unreachable fake GPU alias and verify that the
- * nested remote selection does not reuse it as a local device. */
+ * nested remote selection uses the namespace-safe local device instead. */
 UCS_TEST_P(test_ucp_proto_mock_mtype_sys_dev,
            put_zcopy_remote_sys_dev_namespace, "RNDV_SCHEME=put_zcopy",
            "IB_NUM_PATHS?=1", "MAX_RNDV_LANES=1")
@@ -1608,7 +1608,7 @@ UCS_TEST_P(test_ucp_proto_mock_mtype_sys_dev,
                                              lanes_distance, &rkey_cfg_index));
 
     mem_info.type    = UCS_MEMORY_TYPE_HOST;
-    mem_info.sys_dev = UCS_SYS_DEVICE_ID_UNKNOWN;
+    mem_info.sys_dev = m_transfer_sys_dev;
     mem_info.flags   = UCS_MEM_FLAG_REGISTRABLE;
     ucp_proto_select_param_init(&select_param, UCP_OP_ID_RNDV_RECV, 0, 0,
                                 UCP_DATATYPE_CONTIG, &mem_info, 1);
@@ -1626,7 +1626,7 @@ UCS_TEST_P(test_ucp_proto_mock_mtype_sys_dev,
     rpriv = static_cast<const ucp_proto_rndv_ctrl_priv_t*>(
             threshold->proto_config.priv);
 
-    EXPECT_EQ(UCS_SYS_DEVICE_ID_UNKNOWN,
+    EXPECT_EQ(m_transfer_sys_dev,
               rpriv->remote_proto_config.select_param.sys_dev);
     EXPECT_STREQ("rndv/put/zcopy", rpriv->remote_proto_config.proto->name);
 }
