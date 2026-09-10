@@ -1457,13 +1457,11 @@ protected:
         threshold = ucp_proto_thresholds_search_slow(select_elem->thresholds,
                                                      msg_size);
         ASSERT_STREQ(proto_name, threshold->proto_config.proto->name);
-        EXPECT_EQ(m_user_sys_dev, threshold->proto_config.select_param.sys_dev);
         if (op_id == UCP_OP_ID_RNDV_RECV) {
             const auto *rpriv = static_cast<const ucp_proto_rndv_bulk_priv_t*>(
                     threshold->proto_config.priv);
             EXPECT_EQ(UCS_MEMORY_TYPE_HOST, rpriv->frag_mem_type);
-            EXPECT_TRUE(ucs_topo_is_reachable(m_transfer_sys_dev,
-                                              rpriv->frag_sys_dev));
+            EXPECT_EQ(UCS_SYS_DEVICE_ID_UNKNOWN, rpriv->frag_sys_dev);
         }
 
         ucp_proto_config_query(worker, &threshold->proto_config, msg_size,
