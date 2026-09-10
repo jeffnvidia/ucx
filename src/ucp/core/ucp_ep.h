@@ -367,8 +367,8 @@ KHASH_DECLARE(ucp_ep_peer_mem_hash, uint64_t, ucp_ep_peer_mem_data_t);
 
 
 typedef enum {
-    /* Protocol initialization was done */
-    UCP_EP_PROTO_INITIALIZED = UCS_BIT(0),
+    /* Protocol short-circuit path initialization was done */
+    UCP_EP_PROTO_SHORT_INITIALIZED = UCS_BIT(0),
 } ucp_ep_init_flags_t;
 
 
@@ -513,6 +513,11 @@ typedef struct ucp_ep_recovery_arg {
     /* number of retries left before giving up */
     unsigned                retries_left;
     uint8_t                 state;
+    /* Generation of the LANES_ADDR exchange, pre-incremented by every request
+     * and echoed by the peer in its answers. Only carried on the wire for now,
+     * the follow-up patch matches it against the tokens of an answer to tell
+     * apart the round they belong to */
+    uint32_t                request_id;
     ucp_ep_recovery_probe_t probe[UCP_MAX_LANES];
 } ucp_ep_recovery_arg_t;
 
@@ -788,6 +793,9 @@ void ucp_ep_cleanup_lanes(ucp_ep_h ep);
 
 ucs_status_t ucp_ep_config_init(ucp_worker_h worker, ucp_ep_config_t *config,
                                 const ucp_ep_config_key_t *key);
+
+void ucp_ep_config_proto_short_lazy_init(ucp_worker_h worker,
+                                         ucp_worker_cfg_index_t cfg_index);
 
 void ucp_ep_config_cleanup(ucp_worker_h worker, ucp_ep_config_t *config);
 
