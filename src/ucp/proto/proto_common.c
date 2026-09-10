@@ -496,6 +496,7 @@ ucp_proto_common_filter_min_frag(const ucp_proto_init_params_t *params,
     ucp_md_index_t md_index         = context->tl_rscs[rsc_index].md_index;
     const uct_md_attr_v2_t *md_attr = &context->tl_mds[md_index].attr;
     const uct_iface_attr_t *iface_attr;
+    ucs_sys_device_t lane_sys_dev;
     size_t max_iov, tl_min_frag, tl_max_frag;
 
     /* Check memory registration capabilities for zero-copy case */
@@ -536,9 +537,12 @@ ucp_proto_common_filter_min_frag(const ucp_proto_init_params_t *params,
         /* The lane's device and the memory that will actually be registered
          * on it (which may differ from select_param's buffer, e.g. a staging
          * fragment for mtype protocols) must be topologically reachable. */
-        if (!ucs_topo_is_reachable(ucp_proto_common_get_sys_dev(params, lane),
+        lane_sys_dev = ucp_proto_common_get_sys_dev(params, lane);
+        if (!ucs_topo_is_reachable(lane_sys_dev,
                                    common_params->reg_mem_info.sys_dev)) {
-            ucs_trace("%s: no reachability to reg mem sys_dev=%u", lane_desc,
+            ucs_trace("%s: no reachability between lane_sys_dev=%u and "
+                      "reg_mem_sys_dev=%u",
+                      lane_desc, lane_sys_dev,
                       common_params->reg_mem_info.sys_dev);
             return 0;
         }
