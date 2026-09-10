@@ -1368,8 +1368,7 @@ public:
     test_ucp_proto_mock_mtype_sys_dev() :
         m_user_sys_dev(UCS_SYS_DEVICE_ID_UNKNOWN),
         m_transfer_sys_dev(UCS_SYS_DEVICE_ID_UNKNOWN),
-        m_topo_state(nullptr),
-        m_sibling_sys_dev(UCS_SYS_DEVICE_ID_UNKNOWN)
+        m_topo_state(nullptr)
     {
         mock_transport("rc_mlx5");
     }
@@ -1415,7 +1414,6 @@ public:
 
         m_user_sys_dev     = UCS_SYS_DEVICE_ID_UNKNOWN;
         m_transfer_sys_dev = UCS_SYS_DEVICE_ID_UNKNOWN;
-        m_sibling_sys_dev  = UCS_SYS_DEVICE_ID_UNKNOWN;
     }
 
 protected:
@@ -1430,9 +1428,9 @@ protected:
             UCS_TEST_SKIP_R("CUDA managed memory type endpoint is unavailable");
         }
 
-        auto memh           = mem_map(receiver(), &remote, sizeof(remote));
-        auto rkey_packed    = rkey_pack(receiver(), memh);
-        auto rkey           = rkey_unpack(sender().ep(), rkey_packed);
+        auto memh        = mem_map(receiver(), &remote, sizeof(remote));
+        auto rkey_packed = rkey_pack(receiver(), memh);
+        auto rkey        = rkey_unpack(sender().ep(), rkey_packed);
         ucp_worker_cfg_index_t ep_cfg_index = ep_config_index(sender());
         ucp_rkey_config_t *rkey_config = &ucs_array_elem(&worker->rkey_config,
                                                          rkey->cfg_index);
@@ -1461,9 +1459,8 @@ protected:
         ASSERT_STREQ(proto_name, threshold->proto_config.proto->name);
         EXPECT_EQ(m_user_sys_dev, threshold->proto_config.select_param.sys_dev);
         if (op_id == UCP_OP_ID_RNDV_RECV) {
-            const auto *rpriv =
-                    static_cast<const ucp_proto_rndv_bulk_priv_t*>(
-                            threshold->proto_config.priv);
+            const auto *rpriv = static_cast<const ucp_proto_rndv_bulk_priv_t*>(
+                    threshold->proto_config.priv);
             EXPECT_EQ(UCS_MEMORY_TYPE_HOST, rpriv->frag_mem_type);
             EXPECT_TRUE(ucs_topo_is_reachable(m_transfer_sys_dev,
                                               rpriv->frag_sys_dev));
@@ -1484,7 +1481,7 @@ private:
         static constexpr uintptr_t fake_dma_value      = 0x11685002;
         static constexpr uintptr_t fake_user_value     = 0x11685003;
         static constexpr uintptr_t fake_transfer_value = 0x11685004;
-        ucs_sys_device_t dma_sys_dev, transfer_sys_dev;
+        ucs_sys_device_t dma_sys_dev, sibling_sys_dev, transfer_sys_dev;
         ucs_sys_bus_id_t cuda_bus_id, transfer_bus_id;
         ucp_memory_info_t cuda_mem_info;
 
@@ -1501,21 +1498,21 @@ private:
                                                  &cuda_bus_id));
 
         ASSERT_UCS_OK(ucs_topo_find_device_by_bus_id_and_user_value(
-                &cuda_bus_id, fake_sibling_value, &m_sibling_sys_dev));
+                &cuda_bus_id, fake_sibling_value, &sibling_sys_dev));
         ASSERT_UCS_OK(ucs_topo_find_device_by_bus_id_and_user_value(
                 &cuda_bus_id, fake_dma_value, &dma_sys_dev));
         ASSERT_UCS_OK(ucs_topo_find_device_by_bus_id_and_user_value(
                 &cuda_bus_id, fake_user_value, &m_user_sys_dev));
-        ASSERT_UCS_OK(ucs_topo_sys_device_set_name(m_sibling_sys_dev,
+        ASSERT_UCS_OK(ucs_topo_sys_device_set_name(sibling_sys_dev,
                                                    "fake_sibling_nic", 10));
         ASSERT_UCS_OK(ucs_topo_sys_device_set_name(dma_sys_dev,
                                                    "fake_sibling_dma", 10));
         ASSERT_UCS_OK(ucs_topo_sys_device_set_name(m_user_sys_dev,
                                                    "fake_user_acc", 10));
         ASSERT_UCS_OK(ucs_topo_sys_device_enable_aux_path(m_user_sys_dev));
-        ASSERT_UCS_OK(ucs_topo_sys_device_set_sys_dev_aux(m_sibling_sys_dev,
+        ASSERT_UCS_OK(ucs_topo_sys_device_set_sys_dev_aux(sibling_sys_dev,
                                                           dma_sys_dev));
-        ASSERT_TRUE(ucs_topo_is_sibling(m_sibling_sys_dev, m_user_sys_dev));
+        ASSERT_TRUE(ucs_topo_is_sibling(sibling_sys_dev, m_user_sys_dev));
 
         /* Use an alias of a real transport device as the non-sibling mock NIC.
          * This keeps all topology entries resolvable through sysfs. */
@@ -1541,7 +1538,7 @@ private:
             ASSERT_UCS_OK(
                     ucs_topo_sys_device_enable_aux_path(transfer_sys_dev));
             m_transfer_sys_dev = UCS_SYS_DEVICE_ID_UNKNOWN;
-            ASSERT_UCS_OK(ucs_topo_sys_device_set_sys_dev_aux(m_sibling_sys_dev,
+            ASSERT_UCS_OK(ucs_topo_sys_device_set_sys_dev_aux(sibling_sys_dev,
                                                               dma_sys_dev));
         }
 
@@ -1558,7 +1555,6 @@ private:
     }
 
     ucs_global_state_t *m_topo_state;
-    ucs_sys_device_t    m_sibling_sys_dev;
 };
 
 UCS_TEST_P(test_ucp_proto_mock_mtype_sys_dev, get_host_frag_non_sibling,
